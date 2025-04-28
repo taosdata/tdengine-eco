@@ -44,8 +44,8 @@ public class SparkTest {
     // prepare data
     public static void prepareDemoData() {
         // insert
-        int childTb    = 1;
-        int insertRows = 30;
+        int childTb    = 2;
+        int insertRows = 20;
         Connection connection = null;
         Statement statement   = null;
 
@@ -106,33 +106,6 @@ public class SparkTest {
         }        
     }
 
-	// sql
-	public static Dataset<Row> executeSql(SparkSession spark, String sql, String viewName) {
-        // query sql
-		Dataset<Row> df = spark.read()
-				.format("jdbc") 
-				.option("url", url)
-				.option("driver", driver)
-				.option("queryTimeout", timeout)
-				.option("query", sql)
-				.load();
-
-		System.out.println("------------ show sql query -----------");
-		System.out.println(sql);
-
-        // show schema
-        df.printSchema();
-        // show data
-        df.show();
-
-        // regitser view if need
-        if (viewName != null) {
-            df.createOrReplaceTempView(viewName);
-        }
-
-        return df;
-	}
-
 	// table
 	public static void readTable(SparkSession spark, String dbtable) {
         // query sql
@@ -151,7 +124,24 @@ public class SparkTest {
         df.printSchema();
 		// show data
         df.show();
-	}	
+	}
+
+	// create view
+	public static void createSparkView(SparkSession spark, String sql, String viewName) {
+        // query sql from TDengine
+		Dataset<Row> df = spark.read()
+				.format("jdbc") 
+				.option("url", url)
+				.option("driver", driver)
+				.option("queryTimeout", timeout)
+				.option("query", sql)
+				.load();
+
+        // create view with spark
+        df.createOrReplaceTempView(viewName);
+
+        return ;
+	}    
 
 	// main
 	public static void main(String[] args) {
@@ -169,17 +159,20 @@ public class SparkTest {
 		readTable(spark, dbtable);
         
 		// execute TDengine sql
-		String sql = "select tbname,* from test.meters ";
-		executeSql(spark, sql, "viewMeters");
+		String sql = "select tbname,* from test.meters where tbname='d0'";
+		createSparkView(spark, sql, "viewMeters");
         
         // execute Spark sql
-        Dataset<Row> result = spark.sql("SELECT " +
+        String sparkSql = "SELECT " +
                 "tbname, ts, voltage, " +
                 "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
                 "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
-                "FROM viewMeters");
-
-        result.show(Integer.MAX_VALUE, 40, false);                
+                "FROM viewMeters";
+        
+        System.out.println(sparkSql);
+        Dataset<Row> result = spark.sql(sparkSql);
+        result.show(Integer.MAX_VALUE, 40, false);
+        
 
         // stop
         spark.stop();
