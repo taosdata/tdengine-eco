@@ -2,7 +2,7 @@ package com.taosdata.java;
 
 
 import java.sql.PreparedStatement;
-import java.security.Timestamp;
+import java.sql.Timestamp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.taosdata.jdbc.TSDBDriver;
@@ -59,6 +59,38 @@ public class SparkTest {
 		.getOrCreate();
 	}
 
+    // write data
+    public static void writeToTDengine(Connection connection, int childTb, int insertRows) {
+        Random rand = new Random();
+        long ts = 1700000000001L;
+    
+        // stmt write
+        try {
+            for (int i = 0; i < childTb; i++ ) {
+                String sql = String.format("INSERT INTO test.d%d using test.meters tags(%d,'location%d') VALUES (?,?,?,?) ", i, i, i);
+                System.out.printf("prepare sql:%s\n", sql);
+                PreparedStatement preparedStatement = connection.prepareStatement(sql);
+                for (int j = 0; j < insertRows; j++) {
+                    float current = (float)(10  + i * 0.01);
+                    float phase   = (float)(1   + i * 0.0001);
+                    int   voltage = 100 + rand.nextInt(20);
+
+                    preparedStatement.setTimestamp(1, new Timestamp(ts + j));
+                    preparedStatement.setFloat(2, current);
+                    preparedStatement.setInt(3, voltage);
+                    preparedStatement.setFloat(4, phase);
+                    // submit
+                    preparedStatement.executeUpdate();
+                    System.out.printf("stmt insert test.d%d j=%d %d,%f,%d,%f\n", i, j, ts + j, current, voltage, phase);
+                }
+                preparedStatement.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     // prepare data
     public static void prepareDemoData() {
         // insert
@@ -86,7 +118,11 @@ public class SparkTest {
                 statement.executeUpdate(sqls[i]);
                 System.out.printf("execute sql succ:%s\n", sqls[i]);
             }
+
+            // write data
+            writeToTDengine(connection, childTb, insertRows);
             
+            /* 
             String sql;
             Random rand = new Random();
             long ts = 1700000000001L;
@@ -104,6 +140,7 @@ public class SparkTest {
                     System.out.printf("execute sql succ:%s\n", sql);
                 }
             }
+            */    
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -162,6 +199,23 @@ public class SparkTest {
 
         return ;
 	}
+
+    // analysis data with spark sql
+    public static void analysisDataWithSpark(SparkSession spark) {
+		String sql = "select tbname,* from test.meters where tbname='d0'";
+		createSparkView(spark, sql, "sparkMeters");
+        
+        // execute Spark sql
+        String sparkSql = "SELECT " +
+                "tbname, ts, voltage, " +
+                "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
+                "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
+                "FROM sparkMeters";
+        
+        System.out.println(sparkSql);
+        Dataset<Row> result = spark.sql(sparkSql);
+        result.show(Integer.MAX_VALUE, 40, false);
+    }
 
     // -------------- subscribe ----------------
 
@@ -269,7 +323,7 @@ public class SparkTest {
             // subscribe to the topics
             consumer.subscribe(topics);
             System.out.println("Subscribe topics successfully.");
-            for (int i = 0; i < 50; i++) {
+            for (int i = 0; i < 100; i++) {
                 // poll data
                 ConsumerRecords<ResultBean> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<ResultBean> record : records) {
@@ -300,7 +354,7 @@ public class SparkTest {
             pollExample(consumer);
             System.out.println("pollExample executed successfully.");
             consumer.unsubscribe();
-
+            consumer.close();
         } catch (SQLException ex) {
             System.out.println("Failed to poll data from topic_meters, ErrCode:" + ex.getErrorCode() + "; ErrMessage: " + ex.getMessage());
             return;
@@ -325,22 +379,10 @@ public class SparkTest {
 		String dbtable = "test.meters";
 		readFromTDengine(spark, dbtable);
         
-		// execute TDengine sql
-		String sql = "select tbname,* from test.meters where tbname='d0'";
-		createSparkView(spark, sql, "sparkMeters");
-        
-        // execute Spark sql
-        String sparkSql = "SELECT " +
-                "tbname, ts, voltage, " +
-                "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
-                "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
-                "FROM sparkMeters";
-        
-        System.out.println(sparkSql);
-        Dataset<Row> result = spark.sql(sparkSql);
-        result.show(Integer.MAX_VALUE, 40, false);
+		// spark sql analysis data
+        analysisDataWithSpark(spark);
 
-
+        // subscribe 
         subscribeFromTDengine();
         
 
