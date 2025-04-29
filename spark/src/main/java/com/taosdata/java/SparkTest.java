@@ -160,14 +160,14 @@ public class SparkTest {
         
 		// execute TDengine sql
 		String sql = "select tbname,* from test.meters where tbname='d0'";
-		createSparkView(spark, sql, "viewMeters");
+		createSparkView(spark, sql, "sparkMeters");
         
         // execute Spark sql
         String sparkSql = "SELECT " +
                 "tbname, ts, voltage, " +
                 "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
                 "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
-                "FROM viewMeters";
+                "FROM sparkMeters";
         
         System.out.println(sparkSql);
         Dataset<Row> result = spark.sql(sparkSql);

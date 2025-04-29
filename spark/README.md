@@ -1,23 +1,32 @@
-# What is TD-Flink
-a java project,read from TDengine and write to TDengine on Spark.
+# What is TD-Spark
+Deom for Spark connect TDengine data source, supoort reading/writing/subscribe function.
+
 # Building 
+
 ## Install build dependencies
+
 To install openjdk-8 and maven:
 ```
 sudo apt-get install -y openjdk-8-jdk maven 
 ```
+
 To install Spark:
 ```
-wget https://www.apache.org/dyn/closer.lua/spark/spark-3.2.1/spark-3.2.1-bin-hadoop3.2.tgz
-tar zxf spark-3.2.1-bin-hadoop3.2.tgz -C /usr/local
+wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
+tar zxf spark-3.5.5-bin-hadoop3.tgz -C /usr/local/
+export SPARK_HOME=/usr/local/spark-3.5.5-bin-hadoop3
+export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
 ```
+
 ## Build
+
 ```
 mvn clean package
 ```
+
 # Run
 
 * run the job
 ```
-spark-submit --master local --name TDenginetest --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar
+spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar
 ```
