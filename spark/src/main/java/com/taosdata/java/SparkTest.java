@@ -180,7 +180,7 @@ public class SparkTest {
 		// show schema
         df.printSchema();
 		// show data
-        df.show();
+        df.show(Integer.MAX_VALUE, 40, false);
 	}
 
 	// create view
