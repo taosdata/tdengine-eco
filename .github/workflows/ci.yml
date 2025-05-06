@@ -1,0 +1,41 @@
+name: Build and Run TD-Spark Project
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+
+      - name: Install Spark
+        run: |
+          wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
+          tar zxf spark-3.5.5-bin-hadoop3.tgz -C /usr/local/
+          echo "SPARK_HOME=/usr/local/spark-3.5.5-bin-hadoop3" >> $GITHUB_ENV
+          echo "$SPARK_HOME/bin:$SPARK_HOME/sbin" >> $GITHUB_PATH
+
+      - name: Build the project
+        run: mvn clean package
+
+      - name: Run the project
+        run: spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest target/testSpark-2.0-dist.jar
