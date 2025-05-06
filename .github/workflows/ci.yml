@@ -37,6 +37,33 @@ jobs:
           cd  spark
           mvn clean package
 
+      - name: checkout TDengine
+        uses: actions/checkout@v3
+        with:
+          repository: 'taosdata/TDengine'
+          path: 'TDengine'
+          ref: ${{ github.base_ref }}
+
+      - name: prepare install TDengine
+        run: | 
+          sudo apt-get install  -y libgeos-dev
+          geos-config --version
+     
+      - name: install TDengine
+        run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false && make && sudo make install
+
+      - name: shell
+        run: |
+          cat >start.sh<<EOF 
+          ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
+          EOF
+
+      - name: start taosd
+        run: nohup sudo sh ./start.sh &
+
+      - name: start taosadapter
+        run: sudo taosadapter &          
+
       - name: Run the project
         run: |
           export SPARK_HOME=./spark-3.5.5-bin-hadoop3
