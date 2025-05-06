@@ -69,3 +69,19 @@ jobs:
           export SPARK_HOME=./spark-3.5.5-bin-hadoop3
           export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
           spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar
+
+          output=$(spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest target/testSpark-2.0-dist.jar)
+          strings_to_check=("test read successfully!" "test write successfully!" "test subscritbe successfully!")
+          missing=false
+          for str in "${strings_to_check[@]}"; do
+            if ! echo "$output" | grep -q "$str"; then
+              echo "Output does not contain the string: $str"
+              missing=true
+            fi
+          done
+          if [ "$missing" = true ]; then
+            exit 1
+          else
+            echo "Output contains all specified strings."
+            echo "test spark with TDengine read|write|subscribe passed."
+          fi

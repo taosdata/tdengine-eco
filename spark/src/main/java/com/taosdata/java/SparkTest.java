@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.taosdata.java.SparkTest.ResultBean;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
@@ -27,6 +28,7 @@ import java.sql.Statement;
 import java.util.Random;
 
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
@@ -88,6 +90,8 @@ public class SparkTest {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
+        System.out.println("test write successfully!");
     }
 
 
@@ -102,7 +106,7 @@ public class SparkTest {
 
         try {
             // create TDengine JDBC driver
-            connection = DriverManager.getConnection(url, user, password);
+            connection = DriverManager.getConnection(url);
             statement = connection.createStatement();
             
             // sqls
@@ -166,13 +170,13 @@ public class SparkTest {
 	// table
 	public static void readFromTDengine(SparkSession spark, String dbtable) {
         // query sql
-		Dataset<Row> df = spark.read()
+        DataFrameReader reader = spark.read()
 				.format("jdbc") 
 				.option("url", url)
 				.option("driver", driver)
-				.option("queryTimeout", timeout)
-				.option("dbtable", dbtable)
-				.load();
+				.option("queryTimeout", timeout);
+
+        Dataset<Row> df = reader.option("dbtable", dbtable).load();
 
 		String log = String.format("------------ show dbtable read:%s -----------", dbtable);
 		System.out.println(log);
@@ -181,6 +185,8 @@ public class SparkTest {
         df.printSchema();
 		// show data
         df.show(Integer.MAX_VALUE, 40, false);
+
+        System.out.println("test read successfully!");
 	}
 
 	// create view
@@ -352,7 +358,7 @@ public class SparkTest {
             TaosConsumer<ResultBean> consumer = getConsumer();
 
             pollExample(consumer);
-            System.out.println("pollExample executed successfully.");
+            System.out.println("test subscribe successfully!");
             consumer.unsubscribe();
             consumer.close();
         } catch (SQLException ex) {
