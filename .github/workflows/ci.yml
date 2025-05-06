@@ -31,8 +31,6 @@ jobs:
         run: |
           wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
           tar zxf spark-3.5.5-bin-hadoop3.tgz -C ./
-          echo "SPARK_HOME=./spark-3.5.5-bin-hadoop3" >> $GITHUB_ENV
-          echo "$SPARK_HOME/bin:$SPARK_HOME/sbin" >> $GITHUB_PATH
 
       - name: Build the project
         run: |
@@ -40,4 +38,7 @@ jobs:
           mvn clean package
 
       - name: Run the project
-        run: spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar
+        run: |
+          export SPARK_HOME=./spark-3.5.5-bin-hadoop3
+          export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+          spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar
