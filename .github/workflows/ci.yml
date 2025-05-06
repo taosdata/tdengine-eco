@@ -35,7 +35,9 @@ jobs:
           echo "$SPARK_HOME/bin:$SPARK_HOME/sbin" >> $GITHUB_PATH
 
       - name: Build the project
-        run: mvn clean package
+        run: |
+          cd  spark
+          mvn clean package
 
       - name: Run the project
-        run: spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest target/testSpark-2.0-dist.jar
+        run: spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar
