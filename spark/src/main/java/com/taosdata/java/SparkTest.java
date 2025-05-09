@@ -10,35 +10,49 @@ import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 
-import java.sql.*;
+
 import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
 
+
+import java.sql.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Random;
+
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.DataFrameReader;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.jdbc.JdbcDialect;
 import org.apache.spark.sql.jdbc.JdbcDialects;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SaveMode;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+
 import org.java_websocket.framing.DataFrame;
+
+
+
 
 public class SparkTest {	
 	// connect info
-	static String url      = "jdbc:TAOS-WS://localhost:6041/test?user=root&password=taosdata";
+	static String url      = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
 	static String driver   = "com.taosdata.jdbc.ws.WebSocketDriver";
 	static String user     = "root";
 	static String password = "taosdata";
@@ -62,44 +76,62 @@ public class SparkTest {
 	}
 
     // write data
-    public static void writeToTDengine(Connection connection, int childTb, int insertRows) {
+    public static void writeToTDengine(SparkSession spark, int childTb, int insertRows) {
+        // 创建数据结构
+        List<StructField> fields = new ArrayList<>();
+        fields.add(DataTypes.createStructField("ts", DataTypes.TimestampType, true));
+        fields.add(DataTypes.createStructField("current", DataTypes.FloatType, true));
+        fields.add(DataTypes.createStructField("voltage", DataTypes.IntegerType, true));
+        fields.add(DataTypes.createStructField("phase", DataTypes.FloatType, true));
+        fields.add(DataTypes.createStructField("groupid", DataTypes.IntegerType, true));
+        fields.add(DataTypes.createStructField("location", DataTypes.StringType, true));
+        StructType schema = DataTypes.createStructType(fields);
+        
+        // 准备数据
+        List<Row> data = new ArrayList<>();
         Random rand = new Random();
         long ts = 1700000000001L;
-    
-        // stmt write
-        try {
-            for (int i = 0; i < childTb; i++ ) {
-                String sql = String.format("INSERT INTO test.d%d using test.meters tags(%d,'location%d') VALUES (?,?,?,?) ", i, i, i);
-                System.out.printf("prepare sql:%s\n", sql);
-                PreparedStatement preparedStatement = connection.prepareStatement(sql);
-                for (int j = 0; j < insertRows; j++) {
-                    float current = (float)(10  + i * 0.01);
-                    float phase   = (float)(1   + i * 0.0001);
-                    int   voltage = 100 + rand.nextInt(20);
-
-                    preparedStatement.setTimestamp(1, new Timestamp(ts + j));
-                    preparedStatement.setFloat(2, current);
-                    preparedStatement.setInt(3, voltage);
-                    preparedStatement.setFloat(4, phase);
-                    // submit
-                    preparedStatement.executeUpdate();
-                    System.out.printf("stmt insert test.d%d j=%d %d,%f,%d,%f\n", i, j, ts + j, current, voltage, phase);
-                }
-                preparedStatement.close();
+        
+        for (int i = 0; i < childTb; i++) {
+            for (int j = 0; j < insertRows; j++) {
+                float current = (float) (10 + i * 0.01);
+                float phase = (float) (1 + i * 0.0001);
+                int voltage = 100 + rand.nextInt(20);
+                
+                data.add(RowFactory.create(
+                    new Timestamp(ts + j),
+                    current,
+                    voltage,
+                    phase,
+                    i,
+                    "location" + i
+                ));
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
+        
+        // 创建 DataFrame
+        Dataset<Row> df = spark.createDataFrame(data, schema);
 
-        System.out.println("test write successfully!");
+        df.show();
+        
+        // 写入 TDengine
+        Properties connectionProperties = new Properties();
+        connectionProperties.put("user", user);
+        connectionProperties.put("password", password);
+        connectionProperties.put("driver", driver);
+        connectionProperties.put("queryTimeout", "23");
+        
+        df.write()
+          .mode(SaveMode.Append)
+          .jdbc(url, "test.ntb", connectionProperties);
+          
+        System.out.println("DataFrame 已成功写入 TDengine");
     }
 
 
     // prepare data
-    public static void prepareDemoData() {
+    public static void prepareDemoData(SparkSession spark) {
         // insert
-        int childTb    = 2;
-        int insertRows = 20;
         Connection connection = null;
         Statement statement   = null;
 
@@ -124,27 +156,9 @@ public class SparkTest {
             }
 
             // write data
-            writeToTDengine(connection, childTb, insertRows);
-            
-            /* 
-            String sql;
-            Random rand = new Random();
-            long ts = 1700000000001L;
-            // insert data
-            for (int i = 0; i < childTb; i++ ) {
-                sql = String.format("create table test.d%d using test.meters tags(%d, 'location%d')", i, i, i);
-                statement.executeUpdate(sql);
-                System.out.printf("execute sql succ:%s\n", sql);
-                for (int j = 0; j < insertRows; j++) {
-                    float current = (float)(10  + i * 0.01);
-                    float phase   = (float)(1   + i * 0.0001);
-                    int   voltage = 100 + rand.nextInt(20);
-                    sql = String.format("insert into test.d%d values(%d, %f, %d, %f)", i, ts + j, current, voltage, phase);
-                    statement.executeUpdate(sql);
-                    System.out.printf("execute sql succ:%s\n", sql);
-                }
-            }
-            */    
+            int childTb    = 1;
+            int insertRows = 21;    
+            writeToTDengine(spark, childTb, insertRows);  
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -169,13 +183,14 @@ public class SparkTest {
 
 	// table
 	public static void readFromTDengine(SparkSession spark, String dbtable) {
-        // query sql
+        // create reader
         DataFrameReader reader = spark.read()
 				.format("jdbc") 
 				.option("url", url)
 				.option("driver", driver)
 				.option("queryTimeout", timeout);
 
+        // map table
         Dataset<Row> df = reader.option("dbtable", dbtable).load();
 
 		String log = String.format("------------ show dbtable read:%s -----------", dbtable);
@@ -379,7 +394,7 @@ public class SparkTest {
 		SparkSession spark = createSpark("appSparkTest");
 
         // prepare demo data
-        prepareDemoData();
+        prepareDemoData(spark);
 
 		// read table
 		String dbtable = "test.meters";
