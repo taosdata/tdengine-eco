@@ -159,6 +159,7 @@ public class SparkTest {
             int childTb    = 1;
             int insertRows = 21;    
             writeToTDengine(spark, childTb, insertRows);  
+
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
