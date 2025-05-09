@@ -38,7 +38,7 @@ import org.java_websocket.framing.DataFrame;
 
 public class SparkTest {	
 	// connect info
-	static String url      = "jdbc:TAOS-WS://localhost:6041/test?user=root&password=taosdata";
+	static String url      = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
 	static String driver   = "com.taosdata.jdbc.ws.WebSocketDriver";
 	static String user     = "root";
 	static String password = "taosdata";
@@ -124,27 +124,7 @@ public class SparkTest {
             }
 
             // write data
-            writeToTDengine(connection, childTb, insertRows);
-            
-            /* 
-            String sql;
-            Random rand = new Random();
-            long ts = 1700000000001L;
-            // insert data
-            for (int i = 0; i < childTb; i++ ) {
-                sql = String.format("create table test.d%d using test.meters tags(%d, 'location%d')", i, i, i);
-                statement.executeUpdate(sql);
-                System.out.printf("execute sql succ:%s\n", sql);
-                for (int j = 0; j < insertRows; j++) {
-                    float current = (float)(10  + i * 0.01);
-                    float phase   = (float)(1   + i * 0.0001);
-                    int   voltage = 100 + rand.nextInt(20);
-                    sql = String.format("insert into test.d%d values(%d, %f, %d, %f)", i, ts + j, current, voltage, phase);
-                    statement.executeUpdate(sql);
-                    System.out.printf("execute sql succ:%s\n", sql);
-                }
-            }
-            */    
+            writeToTDengine(connection, childTb, insertRows); 
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
