@@ -52,7 +52,7 @@ public class DemoWrite {
                 // submit
                 preparedStatement.executeUpdate();
 
-                // close
+                // close statement
                 preparedStatement.close();
             }
 

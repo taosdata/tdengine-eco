@@ -52,6 +52,7 @@ public class DemoSubscribe {
 
     public static class ResultDeserializer extends ReferenceDeserializer<ResultBean> {}
     
+    // getSonsumer
     public static TaosConsumer<ResultBean> getConsumer() throws Exception {
         // property
         Properties config = new Properties();
@@ -103,6 +104,7 @@ public class DemoSubscribe {
         return schema;
     }
 
+    // pollExample
     public static void pollExample(SparkSession spark, TaosConsumer<ResultBean> consumer) throws SQLException, JsonProcessingException {
         List<String> topics = Collections.singletonList("topic_meters");
         List<Row> data = new ArrayList<>();
