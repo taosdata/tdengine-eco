@@ -44,10 +44,15 @@ public class DemoWrite {
                     preparedStatement.setFloat    (2, current);
                     preparedStatement.setInt      (3, voltage);
                     preparedStatement.setFloat    (4, phase);
-                    // submit
-                    preparedStatement.executeUpdate();
+                    // add batch
+                    preparedStatement.addBatch();
+                    
                     System.out.printf("stmt insert test.d%d j=%d %d,%f,%d,%f\n", i, j, ts + j, current, voltage, phase);
                 }
+                // submit
+                preparedStatement.executeUpdate();
+
+                // close
                 preparedStatement.close();
             }
 
