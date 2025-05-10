@@ -110,7 +110,8 @@ public class SparkTest {
             String sparkSql = "SELECT " +
                     "tbname, ts, voltage, " +
                     "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
-                    "CONCAT(ROUND(((voltage - (LAG(voltage, 7) OVER (ORDER BY tbname))) / (LAG(voltage, 7) OVER (ORDER BY tbname)) * 100), 1),'%') AS weekly_growth_rate " +
+                    "CONCAT(ROUND(((voltage - (LAG(voltage, 7) OVER (ORDER BY tbname))) / (LAG(voltage, 7) " +
+                    "OVER (ORDER BY tbname)) * 100), 1),'%') AS weekly_growth_rate " +
                     "FROM sparkMeters";
 
             // execute Spark sql

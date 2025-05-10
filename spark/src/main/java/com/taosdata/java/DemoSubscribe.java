@@ -105,7 +105,8 @@ public class DemoSubscribe {
     }
 
     // pollExample
-    public static void pollExample(SparkSession spark, TaosConsumer<ResultBean> consumer) throws SQLException, JsonProcessingException {
+    public static void pollExample(SparkSession spark, TaosConsumer<ResultBean> consumer) 
+                                   throws SQLException, JsonProcessingException {
         List<String> topics = Collections.singletonList("topic_meters");
         List<Row> data = new ArrayList<>();
 
