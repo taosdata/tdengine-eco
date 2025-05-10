@@ -19,17 +19,18 @@ public class DemoWrite {
             .appName("appSparkTest")
             .master("local[*]")
             .getOrCreate();
-        
-        // connection
-        String     url        = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
-        Connection connection = DriverManager.getConnection(url);
-        Random     rand       = new Random();
-        long       ts         = 1700000000001L;
     
         // stmt write
-        int childTb    = 1;
-        int insertRows = 21;           
+        Random rand       = new Random();
+        long   ts         = 1700000000001L;
+        int    childTb    = 1;
+        int    insertRows = 21;  
         try {
+            // connect
+            String     url        = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
+            Connection connection = DriverManager.getConnection(url);
+
+            // write
             for (int i = 0; i < childTb; i++ ) {
                 String sql = String.format("INSERT INTO test.d%d using test.meters tags(%d,'location%d') VALUES (?,?,?,?) ", i, i, i);
                 System.out.printf("prepare sql:%s\n", sql);
@@ -40,9 +41,9 @@ public class DemoWrite {
                     int   voltage = (int)  (210 + rand.nextInt(20));
 
                     preparedStatement.setTimestamp(1, new Timestamp(ts + j));
-                    preparedStatement.setFloat(2, current);
-                    preparedStatement.setInt(3, voltage);
-                    preparedStatement.setFloat(4, phase);
+                    preparedStatement.setFloat    (2, current);
+                    preparedStatement.setInt      (3, voltage);
+                    preparedStatement.setFloat    (4, phase);
                     // submit
                     preparedStatement.executeUpdate();
                     System.out.printf("stmt insert test.d%d j=%d %d,%f,%d,%f\n", i, j, ts + j, current, voltage, phase);
@@ -50,18 +51,20 @@ public class DemoWrite {
                 preparedStatement.close();
             }
 
+            // close
+            connection.close();
+
+            // out succ
+            System.out.println("test write successfully!");
         } catch (SQLException ex) {
             System.out.println("Failed to write data SQL error Message: " + ex.getMessage());
             ex.printStackTrace();
-            return;
-        }
         } catch (Exception ex) {
             System.out.println("Failed to write data error Message: " + ex.getMessage());
             ex.printStackTrace();
-            return;
-        }          
+        }
 
-        // out succ
-        System.out.println("test write successfully!");
+        // stop
+        spark.stop();
     }
 }

@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.taosdata.java.SparkTest.ResultBean;
 import com.taosdata.jdbc.TSDBDriver;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
@@ -37,10 +36,9 @@ import org.apache.spark.sql.jdbc.JdbcDialects;
 import org.java_websocket.framing.DataFrame;
 
 public class DemoSubscribe {
-
-    public static class ResultDeserializer extends ReferenceDeserializer<ResultBean> {}
-
-    // use this class to define the data structure of the result record
+    //
+    // class ResultBean
+    //
     public static class ResultBean {
         private Timestamp ts;
         private double    current;
@@ -59,10 +57,12 @@ public class DemoSubscribe {
         public void      setTs(Timestamp ts)          { this.ts       = ts;}
         public void      setCurrent(double current)   { this.current  = current;}
         public void      setVoltage(int voltage)      { this.voltage  = voltage;}
-        public void      setPhase(double phase)       { this.phase.   = phase;}
+        public void      setPhase(double phase)       { this.phase    = phase;}
         public void      setGroupid(int groupid)      { this.groupid  = groupid;}
         public void      setLocation(String location) { this.location = location;}
     }
+
+    public static class ResultDeserializer extends ReferenceDeserializer<ResultBean> {}
     
     public static TaosConsumer<ResultBean> getConsumer() throws Exception {
         // property
@@ -77,7 +77,7 @@ public class DemoSubscribe {
         config.setProperty("client.id", "clinet1");
         config.setProperty("td.connect.user", "root");
         config.setProperty("td.connect.pass", "taosdata");
-        config.setProperty("value.deserializer", "com.taosdata.java.SparkTest$ResultDeserializer");
+        config.setProperty("value.deserializer", "com.taosdata.java.DemoSubscribe$ResultDeserializer");
         config.setProperty("value.deserializer.encoding", "UTF-8");
 
         try {
@@ -119,18 +119,15 @@ public class DemoSubscribe {
             }
 
         } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to poll data, topic: %s, groupId: %s, clientId: %s, %sErrMessage: %s%n",
+            // catch except
+            System.out.printf("Failed to poll data, topic: %s, %sErrMessage: %s%n",
                     topics.get(0),
-                    groupId,
-                    clientId,
                     ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
                     ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
             ex.printStackTrace();
             throw ex;
         }
-    }    
+    }
 
     // subscribe
     public static void subscribeFromTDengine() {

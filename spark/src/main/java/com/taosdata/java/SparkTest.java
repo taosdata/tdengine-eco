@@ -2,9 +2,12 @@ package com.taosdata.java;
 
 import org.apache.spark.sql.Dataset;
 
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -113,18 +116,20 @@ public class SparkTest {
             // execute Spark sql
             Dataset<Row> result = spark.sql(sparkSql);
 
-        } catch (SQLException ex) {
-            System.out.println("Failed to execute SQL error Message: " + ex.getMessage());
-            ex.printStackTrace();
-            return;
+            // show
+            result.show(Integer.MAX_VALUE, 40, false);
+
+            // out succ
+            System.out.println("test analysis data successfully!");            
+
         } catch (Exception ex) {
             System.out.println("Failed to execute error Message: " + ex.getMessage());
             ex.printStackTrace();
             return;
-        } 
+        }
 
-        // show
-        result.show(Integer.MAX_VALUE, 40, false);
+        // stop
+        spark.stop();
     }
 
 	// main
@@ -146,8 +151,5 @@ public class SparkTest {
         
 		// spark sql analysis data
         analysisDataWithSpark();
-
-        // stop
-        spark.stop();
     }
 }

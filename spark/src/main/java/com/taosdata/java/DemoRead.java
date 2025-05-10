@@ -33,24 +33,23 @@ public class DemoRead {
             String dbtable  = "test.meters";
             Dataset<Row> df = reader.option("dbtable", dbtable).load();
             String log      = String.format("------------ show dbtable read:%s -----------", dbtable);
-            System.out.println(log);            
-        } catch (SQLException ex) {
-            System.out.println("Failed to read SQL error Message: " + ex.getMessage());
-            ex.printStackTrace();
-            return;
+            System.out.println(log);
+            
+            // show schema
+            df.printSchema();
+
+            // show data
+            df.show(Integer.MAX_VALUE, 40, false);
+
+            // out succ log
+            System.out.println("test read successfully!");            
+            
         } catch (Exception ex) {
             System.out.println("Failed to read error Message: " + ex.getMessage());
             ex.printStackTrace();
-            return;
-        } 
+        }
 
-		// show schema
-        df.printSchema();
-
-		// show data
-        df.show(Integer.MAX_VALUE, 40, false);
-
-        // out succ log
-        System.out.println("test read successfully!");
+        // stop
+        spark.stop();
 	}
 }
