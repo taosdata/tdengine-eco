@@ -1,0 +1,87 @@
+name: Build and Run TD-Spark Project
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java 8
+        uses: actions/setup-java@v3
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+
+      - name: Install Spark
+        run: |
+          wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
+          tar zxf spark-3.5.5-bin-hadoop3.tgz -C ./
+
+      - name: Build the project
+        run: |
+          cd  spark
+          mvn clean package
+
+      - name: checkout TDengine
+        uses: actions/checkout@v3
+        with:
+          repository: 'taosdata/TDengine'
+          path: 'TDengine'
+          ref: ${{ github.base_ref }}
+
+      - name: prepare install TDengine
+        run: | 
+          sudo apt-get install  -y libgeos-dev
+          geos-config --version
+     
+      - name: install TDengine
+        run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false && make && sudo make install
+
+      - name: shell
+        run: |
+          cat >start.sh<<EOF 
+          ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
+          EOF
+
+      - name: start taosd
+        run: nohup sudo sh ./start.sh &
+
+      - name: start taosadapter
+        run: sudo taosadapter &          
+
+      - name: Run the project
+        run: |
+          export SPARK_HOME=./spark-3.5.5-bin-hadoop3
+          export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+          rm -f  test.out
+          spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar >> test.out
+          cat test.out
+          strings_to_check=("test read successfully!" "test write successfully!" "test subscribe successfully!" "test analysis data successfully!")
+          missing=false
+          for str in "${strings_to_check[@]}"; do
+            if ! cat test.out | grep -q "$str"; then
+              echo "Output does not contain the string: $str"
+              missing=true
+            fi
+          done
+          if [ "$missing" = true ]; then
+            exit 1
+          else
+            echo "Output contains all specified strings."
+            echo "test spark with TDengine read|write|subscribe passed."
+          fi
