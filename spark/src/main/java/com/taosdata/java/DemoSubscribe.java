@@ -147,7 +147,7 @@ public class DemoSubscribe {
         }
 
         //
-        // put spark dataframe and show
+        // put to spark dataframe and show
         //
         StructType schema = generateSchema();
         Dataset<Row> df   = spark.createDataFrame(data, schema);
