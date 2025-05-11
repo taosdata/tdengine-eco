@@ -21,18 +21,19 @@ public class DemoWrite {
             .getOrCreate();
     
         // stmt write
-        Random rand       = new Random();
-        long   ts         = 1700000000001L;
-        int    childTb    = 1;
-        int    insertRows = 21;  
+        Random rand = new Random();
+        long   ts   = 1700000000001L;
         try {
             // connect
             String     url        = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
             Connection connection = DriverManager.getConnection(url);
 
             // write
+            int childTb    = 1;
+            int insertRows = 21;
             for (int i = 0; i < childTb; i++ ) {
-                String sql = String.format("INSERT INTO test.d%d using test.meters tags(%d,'location%d') VALUES (?,?,?,?) ", i, i, i);
+                String sql = "INSERT INTO test.meters(tbname, groupid, location, ts, current, voltage, phase) " +
+                    "VALUES (?,?,?,?,?,?,?)";
                 System.out.printf("prepare sql:%s\n", sql);
                 PreparedStatement preparedStatement = connection.prepareStatement(sql);
                 for (int j = 0; j < insertRows; j++) {
@@ -40,14 +41,17 @@ public class DemoWrite {
                     float phase   = (float)(1   + rand.nextInt(100) * 0.0001);
                     int   voltage = (int)  (210 + rand.nextInt(20));
 
-                    preparedStatement.setTimestamp(1, new Timestamp(ts + j));
-                    preparedStatement.setFloat    (2, current);
-                    preparedStatement.setInt      (3, voltage);
-                    preparedStatement.setFloat    (4, phase);
+                    preparedStatement.setString   (1, String.format("d%d", i));        // tbname
+                    preparedStatement.setInt      (2, i);                              // groupid
+                    preparedStatement.setString   (3, String.format("location%d", i)); // location
+
+                    preparedStatement.setTimestamp(4, new Timestamp(ts + j));
+                    preparedStatement.setFloat    (5, current);
+                    preparedStatement.setInt      (6, voltage);
+                    preparedStatement.setFloat    (7, phase);
                     // add batch
                     preparedStatement.addBatch();
-                    
-                    System.out.printf("stmt insert test.d%d j=%d %d,%f,%d,%f\n", i, j, ts + j, current, voltage, phase);
+
                 }
                 // submit
                 preparedStatement.executeUpdate();
