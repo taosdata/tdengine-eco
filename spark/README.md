@@ -1,5 +1,5 @@
 # What is TD-Spark
-Deom for Spark connect TDengine data source, supoort reading/writing/subscribe function.
+Demo for Spark connect TDengine data source, supported reading/writing/subscribe function.
 
 # Building 
 
