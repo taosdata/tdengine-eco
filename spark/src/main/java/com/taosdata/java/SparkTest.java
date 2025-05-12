@@ -25,6 +25,21 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Random;
 
+import java.util.ArrayList;
+import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+
+
+
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.DataFrame;
@@ -36,7 +51,7 @@ import org.apache.spark.sql.jdbc.JdbcDialects;
 
 public class SparkTest {
     // connect info
-    static String url = "jdbc:TAOS-WS://localhost:6041/test?user=root&password=taosdata";
+    static String url = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
     static String driver = "com.taosdata.jdbc.ws.WebSocketDriver";
     static String user = "root";
     static String password = "taosdata";
@@ -170,6 +185,7 @@ public class SparkTest {
                .option("driver", driver)
                .option("queryTimeout", timeout)
                .option("query", sql)
+               .option("dbtable", "test.meters")
                .load();
 
         // create view with spark
@@ -182,12 +198,15 @@ public class SparkTest {
         createSparkView(sqlContext, sql, "sparkMeters");
 
         // execute Spark sql
+        /* 
         String sparkSql = "SELECT " +
                 "tbname, ts, voltage, " +
                 "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
-                "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
+                "CONCAT(ROUND(((voltage - (LAG(voltage, 7) OVER (ORDER BY tbname))) / (LAG(voltage, 7) OVER (ORDER BY tbname)) * 100), 1),'%') AS weekly_growth_rate " +
                 "FROM sparkMeters";
+        */
 
+        String sparkSql = "SELECT * from sparkMeters";
         System.out.println(sparkSql);
         DataFrame result = sqlContext.sql(sparkSql);
         result.show();
@@ -195,85 +214,55 @@ public class SparkTest {
 
     // -------------- subscribe ----------------
 
-    public static class ResultDeserializer extends ReferenceDeserializer<ResultBean> {
-
-    }
-
-    // use this class to define the data structure of the result record
+    //
+    // class ResultBean
+    //
     public static class ResultBean {
         private Timestamp ts;
-        private double current;
-        private int voltage;
-        private double phase;
-        private int groupid;
-        private String location;
+        private float     current;
+        private int       voltage;
+        private float     phase;
+        private int       groupid;
+        private String    location;
 
-        public Timestamp getTs() {
-            return ts;
-        }
+        public Timestamp getTs()             { return ts; }
+        public float     getCurrent()        { return current;}
+        public int       getVoltage()        { return voltage;}
+        public float     getPhase()          { return phase;}
+        public int       getGroupid()        { return groupid;}
+        public String    getLocation()       { return location;}
 
-        public void setTs(Timestamp ts) {
-            this.ts = ts;
-        }
-
-        public double getCurrent() {
-            return current;
-        }
-
-        public void setCurrent(double current) {
-            this.current = current;
-        }
-
-        public int getVoltage() {
-            return voltage;
-        }
-
-        public void setVoltage(int voltage) {
-            this.voltage = voltage;
-        }
-
-        public double getPhase() {
-            return phase;
-        }
-
-        public void setPhase(double phase) {
-            this.phase = phase;
-        }
-
-        public int getGroupid() {
-            return groupid;
-        }
-
-        public void setGroupid(int groupid) {
-            this.groupid = groupid;
-        }
-
-        public String getLocation() {
-            return location;
-        }
-
-        public void setLocation(String location) {
-            this.location = location;
-        }
+        public void      setTs(Timestamp ts)          { this.ts       = ts;}
+        public void      setCurrent(float current)    { this.current  = current;}
+        public void      setVoltage(int voltage)      { this.voltage  = voltage;}
+        public void      setPhase(float phase)        { this.phase    = phase;}
+        public void      setGroupid(int groupid)      { this.groupid  = groupid;}
+        public void      setLocation(String location) { this.location = location;}
     }
 
+    public static class ResultDeserializer extends ReferenceDeserializer<ResultBean> {}
+    
+    // getSonsumer
     public static TaosConsumer<ResultBean> getConsumer() throws Exception {
+        // property
+        String cls        = "com.taosdata.java.SparkTest$ResultDeserializer";
         Properties config = new Properties();
-        config.setProperty("td.connect.type", "ws");
-        config.setProperty("bootstrap.servers", "localhost:6041");
-        config.setProperty("auto.offset.reset", "earliest");
-        config.setProperty("msg.with.table.name", "true");
-        config.setProperty("enable.auto.commit", "true");
-        config.setProperty("auto.commit.interval.ms", "1000");
-        config.setProperty("group.id", "group1");
-        config.setProperty("client.id", "clinet1");
-        config.setProperty("td.connect.user", "root");
-        config.setProperty("td.connect.pass", "taosdata");
-        config.setProperty("value.deserializer", "com.taosdata.java.SparkTest$ResultDeserializer");
+        config.setProperty("td.connect.type",             "ws");
+        config.setProperty("bootstrap.servers",           "localhost:6041");
+        config.setProperty("auto.offset.reset",           "earliest");
+        config.setProperty("msg.with.table.name",         "true");
+        config.setProperty("enable.auto.commit",          "true");
+        config.setProperty("auto.commit.interval.ms",     "1000");
+        config.setProperty("group.id",                    "group1");
+        config.setProperty("client.id",                   "clinet1");
+        config.setProperty("td.connect.user",             "root");
+        config.setProperty("td.connect.pass",             "taosdata");
+        config.setProperty("value.deserializer",          cls);
         config.setProperty("value.deserializer.encoding", "UTF-8");
 
         try {
-            TaosConsumer<ResultBean> consumer = new TaosConsumer<>(config);
+            // new consumer
+            TaosConsumer<ResultBean> consumer= new TaosConsumer<>(config);
             System.out.printf("Create consumer successfully, host: %s, groupId: %s, clientId: %s%n",
                     config.getProperty("bootstrap.servers"),
                     config.getProperty("group.id"),
@@ -281,11 +270,11 @@ public class SparkTest {
             return consumer;
         } catch (Exception ex) {
             // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to create websocket consumer, host: %s, groupId: %s, clientId: %s, %sErrMessage: %s%n",
+            System.out.printf("Failed to create websocket consumer, " + 
+                    "host: %s, groupId: %s, clientId: %s, ErrMessage: %s%n",
                     config.getProperty("bootstrap.servers"),
                     config.getProperty("group.id"),
                     config.getProperty("client.id"),
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
                     ex.getMessage());
             // Print stack trace for context in examples. Use logging in production.
             ex.printStackTrace();
@@ -293,10 +282,28 @@ public class SparkTest {
         }
     }
 
-    public static void pollExample(TaosConsumer<ResultBean> consumer) throws SQLException, JsonProcessingException {
+    public static StructType generateSchema() {
+        // schema
+        List<StructField> fields = new ArrayList<>();
+        fields.add(DataTypes.createStructField("ts", DataTypes.TimestampType, true));
+        fields.add(DataTypes.createStructField("current", DataTypes.FloatType, true));
+        fields.add(DataTypes.createStructField("voltage", DataTypes.IntegerType, true));
+        fields.add(DataTypes.createStructField("phase", DataTypes.FloatType, true));
+        fields.add(DataTypes.createStructField("groupid", DataTypes.IntegerType, true));
+        fields.add(DataTypes.createStructField("location", DataTypes.StringType, true));
+        StructType schema = DataTypes.createStructType(fields);
+        return schema;
+    }    
+
+    public static void pollExample(SQLContext sqlContext, TaosConsumer<ResultBean> consumer) throws SQLException, JsonProcessingException {
         List<String> topics = Collections.singletonList("topic_meters");
+        List<Row> data = new ArrayList<>();
+
+        //
+        // obtain data
+        //
         try {
-            // subscribe to the topics
+            // subscribe  topics
             consumer.subscribe(topics);
             System.out.println("Subscribe topics successfully.");
             for (int i = 0; i < 100; i++) {
@@ -305,29 +312,47 @@ public class SparkTest {
                 for (ConsumerRecord<ResultBean> record : records) {
                     ResultBean bean = record.value();
                     // Add your data processing logic here
-                    System.out.println("data: " + JsonUtil.getObjectMapper().writeValueAsString(bean));
+                    // System.out.println("data: " + JsonUtil.getObjectMapper().writeValueAsString(bean));
+
+                    // covert bean to row
+                    data.add(RowFactory.create(
+                        bean.getTs(),
+                        bean.getCurrent(),
+                        bean.getVoltage(),
+                        bean.getPhase(),
+                        bean.getGroupid(),
+                        bean.getLocation()
+                    ));
+                    
                 }
             }
+
         } catch (Exception ex) {
-            // please refer to the JDBC specifications for detailed exceptions info
-            System.out.printf("Failed to poll data, topic: %s, groupId: %s, clientId: %s, %sErrMessage: %s%n",
+            // catch except
+            System.out.printf("Failed to poll data, topic: %s, %sErrMessage: %s%n",
                     topics.get(0),
-                    groupId,
-                    clientId,
                     ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
                     ex.getMessage());
-            // Print stack trace for context in examples. Use logging in production.
             ex.printStackTrace();
-            throw ex;
         }
+
+        //
+        // put to spark dataframe and show
+        //
+        StructType schema = generateSchema();
+        DataFrame df      = sqlContext.createDataFrame(data, schema);
+
+        // show
+        System.out.println("------------- below is subscribe data --------------");
+        df.show();
     }
 
     // subscribe
-    public static void subscribeFromTDengine() {
+    public static void subscribeFromTDengine(SQLContext sqlContext) {
         try {
             TaosConsumer<ResultBean> consumer = getConsumer();
 
-            pollExample(consumer);
+            pollExample(sqlContext, consumer);
             System.out.println("pollExample executed successfully.");
             consumer.unsubscribe();
             consumer.close();
@@ -359,7 +384,7 @@ public class SparkTest {
         analysisDataWithSpark(sqlContext);
 
         // subscribe
-        subscribeFromTDengine();
+        subscribeFromTDengine(sqlContext);
 
         // stop
         sqlContext.sparkContext().stop();
