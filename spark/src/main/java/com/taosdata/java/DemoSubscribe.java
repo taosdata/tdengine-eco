@@ -1,5 +1,6 @@
 package com.taosdata.java;
 
+import com.taosdata.java.DemoSubscribe.ResultBean;
 import com.taosdata.jdbc.tmq.*;
 import com.taosdata.jdbc.utils.JsonUtil;
 
@@ -55,6 +56,7 @@ public class DemoSubscribe {
     // getSonsumer
     public static TaosConsumer<ResultBean> getConsumer() throws Exception {
         // property
+        String cls        = "com.taosdata.java.DemoSubscribe$ResultDeserializer";
         Properties config = new Properties();
         config.setProperty("td.connect.type",             "ws");
         config.setProperty("bootstrap.servers",           "localhost:6041");
@@ -66,7 +68,7 @@ public class DemoSubscribe {
         config.setProperty("client.id",                   "clinet1");
         config.setProperty("td.connect.user",             "root");
         config.setProperty("td.connect.pass",             "taosdata");
-        config.setProperty("value.deserializer",          "com.taosdata.java.DemoSubscribe$ResultDeserializer");
+        config.setProperty("value.deserializer",          cls);
         config.setProperty("value.deserializer.encoding", "UTF-8");
 
         try {
@@ -80,11 +82,10 @@ public class DemoSubscribe {
         } catch (Exception ex) {
             // please refer to the JDBC specifications for detailed exceptions info
             System.out.printf("Failed to create websocket consumer, " + 
-                    "host: %s, groupId: %s, clientId: %s, %sErrMessage: %s%n",
+                    "host: %s, groupId: %s, clientId: %s, ErrMessage: %s%n",
                     config.getProperty("bootstrap.servers"),
                     config.getProperty("group.id"),
                     config.getProperty("client.id"),
-                    ex instanceof SQLException ? "ErrCode: " + ((SQLException) ex).getErrorCode() + ", " : "",
                     ex.getMessage());
             // Print stack trace for context in examples. Use logging in production.
             ex.printStackTrace();
@@ -155,7 +156,7 @@ public class DemoSubscribe {
         Dataset<Row> df   = spark.createDataFrame(data, schema);
 
         // show
-        System.out.println("----------------- below is subscribe data ----------------");
+        System.out.println("------------- below is subscribe data --------------");
         df.show(Integer.MAX_VALUE, 40, false);
     }
 
