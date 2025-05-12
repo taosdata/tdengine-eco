@@ -28,14 +28,16 @@ public class DemoWrite {
             String     url        = "jdbc:TAOS-WS://localhost:6041/?user=root&password=taosdata";
             Connection connection = DriverManager.getConnection(url);
 
-            // write
             int childTb    = 1;
             int insertRows = 21;
+            String sql = "INSERT INTO test.meters(tbname, groupid, location, ts, current, voltage, phase) " +
+                "VALUES (?,?,?,?,?,?,?)";
+            System.out.printf("prepare sql:%s\n", sql);
+            // prepare
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+
+            // write
             for (int i = 0; i < childTb; i++ ) {
-                String sql = "INSERT INTO test.meters(tbname, groupid, location, ts, current, voltage, phase) " +
-                    "VALUES (?,?,?,?,?,?,?)";
-                System.out.printf("prepare sql:%s\n", sql);
-                PreparedStatement preparedStatement = connection.prepareStatement(sql);
                 for (int j = 0; j < insertRows; j++) {
                     float current = (float)(10  + rand.nextInt(100) * 0.01);
                     float phase   = (float)(1   + rand.nextInt(100) * 0.0001);
@@ -51,14 +53,14 @@ public class DemoWrite {
                     preparedStatement.setFloat    (7, phase);
                     // add batch
                     preparedStatement.addBatch();
-
                 }
-                // submit
-                preparedStatement.executeUpdate();
-
-                // close statement
-                preparedStatement.close();
             }
+
+            // submit
+            preparedStatement.executeUpdate();
+
+            // close statement
+            preparedStatement.close();
 
             // close
             connection.close();
