@@ -57,7 +57,7 @@ public class DemoWrite {
             }
 
             // submit
-            preparedStatement.executeUpdate();
+            preparedStatement.executeBatch();
 
             // close statement
             preparedStatement.close();
