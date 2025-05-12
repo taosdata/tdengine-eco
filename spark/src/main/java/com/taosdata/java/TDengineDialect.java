@@ -38,7 +38,7 @@ public class TDengineDialect extends JdbcDialect {
 
     @Override
     public String quoteIdentifier(String colName) {
-        return "`" + colName.replace("`", "``") + "`";
+        return "`" + colName + "`";
     }
 
 }
