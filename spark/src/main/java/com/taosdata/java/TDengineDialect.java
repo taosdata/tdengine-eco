@@ -12,10 +12,6 @@ import org.apache.spark.sql.types.MetadataBuilder;
 import java.sql.Types;
 import java.util.Optional;
 
-import scala.jdk.javaapi.OptionConverters;
-
-import java.sql.Types;
-
 public class TDengineDialect extends JdbcDialect {
 
     @Override

@@ -1,6 +1,5 @@
 package com.taosdata.java;
 
-
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 
@@ -26,54 +25,54 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Random;
 
-import org.apache.spark.sql.Dataset;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.DataFrame;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SQLContext;
 import org.apache.spark.sql.SaveMode;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.jdbc.JdbcDialect;
 import org.apache.spark.sql.jdbc.JdbcDialects;
-import org.java_websocket.framing.DataFrame;
 
-public class SparkTest {	
-	// connect info
-	static String url      = "jdbc:TAOS-WS://localhost:6041/test?user=root&password=taosdata";
-	static String driver   = "com.taosdata.jdbc.ws.WebSocketDriver";
-	static String user     = "root";
-	static String password = "taosdata";
-	static int    timeout  = 60; // seconds
+public class SparkTest {
+    // connect info
+    static String url = "jdbc:TAOS-WS://localhost:6041/test?user=root&password=taosdata";
+    static String driver = "com.taosdata.jdbc.ws.WebSocketDriver";
+    static String user = "root";
+    static String password = "taosdata";
+    static String timeout = "60"; // seconds
 
     static private String groupId = "group1";
-    static private String clientId = "clinet1";    
+    static private String clientId = "clinet1";
 
-	// td dialect
-	public static void registerDialect() {
-		JdbcDialect tdDialect = new TDengineDialect();
-		JdbcDialects.registerDialect(tdDialect);
-	}
+    // td dialect
+    public static void registerDialect() {
+        JdbcDialect tdDialect = new TDengineDialect();
+        JdbcDialects.registerDialect(tdDialect);
+    }
 
-	// create spark
-	public static SparkSession createSpark(String appName) {
-        return SparkSession.builder()
-		.appName(appName)
-		.master("local[*]")
-		.getOrCreate();
-	}
+    // create spark
+    public static SQLContext createSpark(String appName) {
+        SparkConf conf = new SparkConf().setAppName(appName).setMaster("local[*]");
+        JavaSparkContext sc = new JavaSparkContext(conf);
+        return new SQLContext(sc);
+    }
 
     // write data
     public static void writeToTDengine(Connection connection, int childTb, int insertRows) {
         Random rand = new Random();
         long ts = 1700000000001L;
-    
+
         // stmt write
         try {
-            for (int i = 0; i < childTb; i++ ) {
+            for (int i = 0; i < childTb; i++) {
                 String sql = String.format("INSERT INTO test.d%d using test.meters tags(%d,'location%d') VALUES (?,?,?,?) ", i, i, i);
                 System.out.printf("prepare sql:%s\n", sql);
                 PreparedStatement preparedStatement = connection.prepareStatement(sql);
                 for (int j = 0; j < insertRows; j++) {
-                    float current = (float)(10  + i * 0.01);
-                    float phase   = (float)(1   + i * 0.0001);
-                    int   voltage = 100 + rand.nextInt(20);
+                    float current = (float) (10 + i * 0.01);
+                    float phase = (float) (1 + i * 0.0001);
+                    int voltage = 100 + rand.nextInt(20);
 
                     preparedStatement.setTimestamp(1, new Timestamp(ts + j));
                     preparedStatement.setFloat(2, current);
@@ -90,28 +89,26 @@ public class SparkTest {
         }
     }
 
-
     // prepare data
     public static void prepareDemoData() {
         // insert
-        int childTb    = 2;
+        int childTb = 2;
         int insertRows = 20;
         Connection connection = null;
-        Statement statement   = null;
-
+        Statement statement = null;
 
         try {
             // create TDengine JDBC driver
             connection = DriverManager.getConnection(url, user, password);
             statement = connection.createStatement();
-            
+
             // sqls
             String[] sqls = {
-                "DROP TOPIC IF EXISTS topic_meters",
-                "DROP DATABASE IF EXISTS test",
-                "CREATE DATABASE test",
-                "CREATE TABLE test.meters(ts timestamp, current float, voltage int , phase float) tags(groupid int, location varchar(24))",
-                "CREATE TOPIC topic_meters as select * from test.meters;"
+                    "DROP TOPIC IF EXISTS topic_meters",
+                    "DROP DATABASE IF EXISTS test",
+                    "CREATE DATABASE test",
+                    "CREATE TABLE test.meters(ts timestamp, current float, voltage int , phase float) tags(groupid int, location varchar(24))",
+                    "CREATE TOPIC topic_meters as select * from test.meters;"
             };
 
             for (int i = 0; i < sqls.length; i++) {
@@ -121,26 +118,7 @@ public class SparkTest {
 
             // write data
             writeToTDengine(connection, childTb, insertRows);
-            
-            /* 
-            String sql;
-            Random rand = new Random();
-            long ts = 1700000000001L;
-            // insert data
-            for (int i = 0; i < childTb; i++ ) {
-                sql = String.format("create table test.d%d using test.meters tags(%d, 'location%d')", i, i, i);
-                statement.executeUpdate(sql);
-                System.out.printf("execute sql succ:%s\n", sql);
-                for (int j = 0; j < insertRows; j++) {
-                    float current = (float)(10  + i * 0.01);
-                    float phase   = (float)(1   + i * 0.0001);
-                    int   voltage = 100 + rand.nextInt(20);
-                    sql = String.format("insert into test.d%d values(%d, %f, %d, %f)", i, ts + j, current, voltage, phase);
-                    statement.executeUpdate(sql);
-                    System.out.printf("execute sql succ:%s\n", sql);
-                }
-            }
-            */    
+
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -160,61 +138,59 @@ public class SparkTest {
                     e.printStackTrace();
                 }
             }
-        }        
+        }
     }
 
-	// table
-	public static void readFromTDengine(SparkSession spark, String dbtable) {
+    // table
+    public static void readFromTDengine(SQLContext sqlContext, String dbtable) {
         // query sql
-		Dataset<Row> df = spark.read()
-				.format("jdbc") 
-				.option("url", url)
-				.option("driver", driver)
-				.option("queryTimeout", timeout)
-				.option("dbtable", dbtable)
-				.load();
+        DataFrame df = sqlContext.read()
+               .format("jdbc")
+               .option("url", url)
+               .option("driver", driver)
+               .option("queryTimeout", timeout)
+               .option("dbtable", dbtable)
+               .load();
 
-		String log = String.format("------------ show dbtable read:%s -----------", dbtable);
-		System.out.println(log);
+        String log = String.format("------------ show dbtable read:%s -----------", dbtable);
+        System.out.println(log);
 
-		// show schema
+        // show schema
         df.printSchema();
-		// show data
-        df.show(Integer.MAX_VALUE, 40, false);
-	}
+        // show data
+        df.show();
+    }
 
-	// create view
-	public static void createSparkView(SparkSession spark, String sql, String viewName) {
+    // create view
+    public static void createSparkView(SQLContext sqlContext, String sql, String viewName) {
         // query sql from TDengine
-		Dataset<Row> df = spark.read()
-				.format("jdbc") 
-				.option("url", url)
-				.option("driver", driver)
-				.option("queryTimeout", timeout)
-				.option("query", sql)
-				.load();
+        DataFrame df = sqlContext.read()
+               .format("jdbc")
+               .option("url", url)
+               .option("driver", driver)
+               .option("queryTimeout", timeout)
+               .option("query", sql)
+               .load();
 
         // create view with spark
-        df.createOrReplaceTempView(viewName);
-
-        return ;
-	}
+        df.registerTempTable(viewName);
+    }
 
     // analysis data with spark sql
-    public static void analysisDataWithSpark(SparkSession spark) {
-		String sql = "select tbname,* from test.meters where tbname='d0'";
-		createSparkView(spark, sql, "sparkMeters");
-        
+    public static void analysisDataWithSpark(SQLContext sqlContext) {
+        String sql = "select tbname,* from test.meters where tbname='d0'";
+        createSparkView(sqlContext, sql, "sparkMeters");
+
         // execute Spark sql
         String sparkSql = "SELECT " +
                 "tbname, ts, voltage, " +
                 "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
                 "CONCAT(ROUND(((voltage - voltage_last_week) / voltage_last_week * 100), 1),'%') AS weekly_growth_rate " +
                 "FROM sparkMeters";
-        
+
         System.out.println(sparkSql);
-        Dataset<Row> result = spark.sql(sparkSql);
-        result.show(Integer.MAX_VALUE, 40, false);
+        DataFrame result = sqlContext.sql(sparkSql);
+        result.show();
     }
 
     // -------------- subscribe ----------------
@@ -280,7 +256,7 @@ public class SparkTest {
             this.location = location;
         }
     }
-    
+
     public static TaosConsumer<ResultBean> getConsumer() throws Exception {
         Properties config = new Properties();
         config.setProperty("td.connect.type", "ws");
@@ -297,7 +273,7 @@ public class SparkTest {
         config.setProperty("value.deserializer.encoding", "UTF-8");
 
         try {
-            TaosConsumer<ResultBean> consumer= new TaosConsumer<>(config);
+            TaosConsumer<ResultBean> consumer = new TaosConsumer<>(config);
             System.out.printf("Create consumer successfully, host: %s, groupId: %s, clientId: %s%n",
                     config.getProperty("bootstrap.servers"),
                     config.getProperty("group.id"),
@@ -344,7 +320,7 @@ public class SparkTest {
             ex.printStackTrace();
             throw ex;
         }
-    }    
+    }
 
     // subscribe
     public static void subscribeFromTDengine() {
@@ -361,32 +337,31 @@ public class SparkTest {
         } catch (Exception ex) {
             System.out.println("Failed to poll data from topic_meters, ErrMessage: " + ex.getMessage());
             return;
-        }        
+        }
     }
 
-	// main
-	public static void main(String[] args) {
-		// reister dialect
-		registerDialect();
+    // main
+    public static void main(String[] args) {
+        // register dialect
+        registerDialect();
 
-		// create spark
-		SparkSession spark = createSpark("appSparkTest");
+        // create spark
+        SQLContext sqlContext = createSpark("appSparkTest");
 
         // prepare demo data
         prepareDemoData();
 
-		// read table
-		String dbtable = "test.meters";
-		readFromTDengine(spark, dbtable);
-        
-		// spark sql analysis data
-        analysisDataWithSpark(spark);
+        // read table
+        String dbtable = "test.meters";
+        readFromTDengine(sqlContext, dbtable);
 
-        // subscribe 
+        // spark sql analysis data
+        analysisDataWithSpark(sqlContext);
+
+        // subscribe
         subscribeFromTDengine();
-        
 
         // stop
-        spark.stop();
+        sqlContext.sparkContext().stop();
     }
 }
