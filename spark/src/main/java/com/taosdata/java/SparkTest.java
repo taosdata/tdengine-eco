@@ -177,15 +177,14 @@ public class SparkTest {
     }
 
     // create view
-    public static void createSparkView(SQLContext sqlContext, String sql, String viewName) {
+    public static void createSparkView(SQLContext sqlContext, String dbtable, String viewName) {
         // query sql from TDengine
         DataFrame df = sqlContext.read()
                .format("jdbc")
                .option("url", url)
                .option("driver", driver)
                .option("queryTimeout", timeout)
-               .option("query", sql)
-               .option("dbtable", "test.meters")
+               .option("dbtable", dbtable)
                .load();
 
         // create view with spark
@@ -194,19 +193,14 @@ public class SparkTest {
 
     // analysis data with spark sql
     public static void analysisDataWithSpark(SQLContext sqlContext) {
-        String sql = "select tbname,* from test.meters where tbname='d0'";
-        createSparkView(sqlContext, sql, "sparkMeters");
+        createSparkView(sqlContext, "test.meters", "sparkMeters");
 
         // execute Spark sql
-        /* 
+     
         String sparkSql = "SELECT " +
-                "tbname, ts, voltage, " +
-                "(LAG(voltage, 7) OVER (ORDER BY tbname)) AS voltage_last_week, " +
-                "CONCAT(ROUND(((voltage - (LAG(voltage, 7) OVER (ORDER BY tbname))) / (LAG(voltage, 7) OVER (ORDER BY tbname)) * 100), 1),'%') AS weekly_growth_rate " +
-                "FROM sparkMeters";
-        */
-
-        String sparkSql = "SELECT * from sparkMeters";
+                "groupid, avg(voltage) as voltage_avg" +
+                "FROM sparkMeters group by groupid";
+    
         System.out.println(sparkSql);
         DataFrame result = sqlContext.sql(sparkSql);
         result.show();
