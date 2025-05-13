@@ -198,7 +198,7 @@ public class SparkTest {
         // execute Spark sql
      
         String sparkSql = "SELECT " +
-                "groupid, avg(voltage) as voltage_avg" +
+                "groupid, avg(voltage) as voltage_avg " +
                 "FROM sparkMeters group by groupid";
     
         System.out.println(sparkSql);
