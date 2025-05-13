@@ -1,5 +1,5 @@
 # What is TD-Spark
-Deom for Spark connect TDengine data source, supoort reading/writing/subscribe function.
+Demo for Spark connect TDengine data source, supported reading/writing/subscribe function.
 
 # Building 
 
@@ -11,22 +11,28 @@ sudo apt-get install -y openjdk-8-jdk maven
 ```
 
 To install Spark:
-```
-wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
-tar zxf spark-3.5.5-bin-hadoop3.tgz -C /usr/local/
-export SPARK_HOME=/usr/local/spark-3.5.5-bin-hadoop3
+``` bash
+wget https://archive.apache.org/dist/spark/spark-1.6.0/spark-1.6.0-bin-hadoop2.6.tgz
+tar zxf spark-1.6.0-bin-hadoop2.6.tgz -C /usr/local/
+export SPARK_HOME=/usr/local/spark-1.6.0-bin-hadoop2.6
 export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
 ```
 
 ## Build
 
-```
+``` bash
 mvn clean package
 ```
 
 # Run
 
-* run the job
-```
-spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar
+run the job
+``` bash
+spark-submit \
+  --driver-java-options "--add-opens java.base/java.lang=ALL-UNNAMED" \
+  --conf "spark.executor.extraJavaOptions=--add-opens java.base/java.lang=ALL-UNNAMED" \
+  --master local \
+  --name TDenginetest \
+  --class com.taosdata.java.SparkTest \
+  target/testSpark-2.0.jar
 ```
