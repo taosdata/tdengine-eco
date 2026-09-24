@@ -11,8 +11,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.jdbc.JdbcDialect;
 import org.apache.spark.sql.jdbc.JdbcDialects;
+
+import com.taosdata.spark.TDengineDialect;
 
 
 public class SparkTest {	
@@ -23,8 +24,7 @@ public class SparkTest {
 
 	// td dialect
 	public static void registerDialect() {
-		JdbcDialect tdDialect = new TDengineDialect();
-		JdbcDialects.registerDialect(tdDialect);
+		JdbcDialects.registerDialect(new TDengineDialect());
 	}
 
     // prepare env 

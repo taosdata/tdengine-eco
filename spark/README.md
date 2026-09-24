@@ -1,6 +1,8 @@
 # What is TD-Spark
 Demo for Spark connect TDengine data source, supported reading/writing/subscribe function.
 
+The demo registers the official TDengine Spark JDBC dialect ([tdengine-spark-dialect](https://github.com/taosdata/tdengine-spark-dialect)), which is declared in `pom.xml` and pulled from Maven Central at build time.
+
 # Building 
 
 ## Install build dependencies
