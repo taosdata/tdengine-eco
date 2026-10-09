@@ -40,7 +40,12 @@ public class SparkIntegrationTest {
     private static final int  ROWS_PER_TABLE = 21;
     private static final long TOTAL_ROWS     = (long) CHILD_TABLES * ROWS_PER_TABLE;
 
+    // dedicated database for this test run, unique per JVM launch so the test
+    // never touches a pre-existing database on a reachable server
+    private static final String DB_NAME = "spark_it_" + System.currentTimeMillis();
+
     private static SparkSession spark;
+    private static boolean databaseCreated;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -53,16 +58,17 @@ public class SparkIntegrationTest {
             return;
         }
 
-        // prepare database and super table
+        // create a fresh database and super table for this run only
         try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("DROP DATABASE IF EXISTS test");
-            statement.executeUpdate("CREATE DATABASE test");
-            statement.executeUpdate("CREATE TABLE test.meters(ts timestamp, current float, voltage int, phase float) " +
+            statement.executeUpdate("CREATE DATABASE " + DB_NAME);
+            // mark as created right away so tearDown cleans up on later failures
+            databaseCreated = true;
+            statement.executeUpdate("CREATE TABLE " + DB_NAME + ".meters(ts timestamp, current float, voltage int, phase float) " +
                     "tags(groupid int, location varchar(24))");
         }
 
         // write data via parameter binding, same as DemoWrite
-        String sql = "INSERT INTO test.meters(tbname, groupid, location, ts, current, voltage, phase) " +
+        String sql = "INSERT INTO " + DB_NAME + ".meters(tbname, groupid, location, ts, current, voltage, phase) " +
                 "VALUES (?,?,?,?,?,?,?)";
         long ts = 1700000000001L;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -95,9 +101,14 @@ public class SparkIntegrationTest {
         if (spark != null) {
             spark.stop();
         }
+        // only drop the database when this run actually created it; in particular
+        // do not open a new connection when the class was skipped
+        if (!databaseCreated) {
+            return;
+        }
         try (Connection connection = DriverManager.getConnection(URL);
              Statement statement = connection.createStatement()) {
-            statement.executeUpdate("DROP DATABASE IF EXISTS test");
+            statement.executeUpdate("DROP DATABASE IF EXISTS " + DB_NAME);
         }
     }
 
@@ -115,7 +126,7 @@ public class SparkIntegrationTest {
                 .option("url", URL)
                 .option("driver", DRIVER)
                 .option("queryTimeout", "60")
-                .option("dbtable", "test.meters")
+                .option("dbtable", DB_NAME + ".meters")
                 .load();
 
         assertEquals(TOTAL_ROWS, df.count());
