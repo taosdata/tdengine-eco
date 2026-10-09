@@ -12,11 +12,11 @@ To install openjdk-8 and maven:
 sudo apt-get install -y openjdk-8-jdk maven 
 ```
 
-To install Spark:
+To install Spark (3.3.2 with Scala 2.13 — the runtime combination required by [tdengine-spark-dialect](https://github.com/taosdata/tdengine-spark-dialect) 1.0.0, matching the `spark-sql_2.13` 3.3.2 dependency declared in `pom.xml`):
 ```
-wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
-tar zxf spark-3.5.5-bin-hadoop3.tgz -C /usr/local/
-export SPARK_HOME=/usr/local/spark-3.5.5-bin-hadoop3
+wget https://archive.apache.org/dist/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3-scala2.13.tgz
+tar zxf spark-3.3.2-bin-hadoop3-scala2.13.tgz -C /usr/local/
+export SPARK_HOME=/usr/local/spark-3.3.2-bin-hadoop3-scala2.13
 export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
 ```
 

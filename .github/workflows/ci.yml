@@ -29,8 +29,8 @@ jobs:
 
       - name: Install Spark
         run: |
-          wget https://archive.apache.org/dist/spark/spark-3.5.5/spark-3.5.5-bin-hadoop3.tgz
-          tar zxf spark-3.5.5-bin-hadoop3.tgz -C ./
+          wget https://archive.apache.org/dist/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3-scala2.13.tgz
+          tar zxf spark-3.3.2-bin-hadoop3-scala2.13.tgz -C ./
 
       - name: Build the project
         run: |
@@ -66,7 +66,7 @@ jobs:
 
       - name: Run the project
         run: |
-          export SPARK_HOME=./spark-3.5.5-bin-hadoop3
+          export SPARK_HOME=./spark-3.3.2-bin-hadoop3-scala2.13
           export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
           rm -f  test.out
           spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest spark/target/testSpark-2.0-dist.jar >> test.out
