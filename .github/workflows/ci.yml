@@ -32,37 +32,27 @@ jobs:
           wget https://archive.apache.org/dist/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3-scala2.13.tgz
           tar zxf spark-3.3.2-bin-hadoop3-scala2.13.tgz -C ./
 
+      - name: Start TDengine
+        run: |
+          docker run -d --name tdengine -p 6030:6030 -p 6041:6041 tdengine/tdengine:latest
+          echo "Waiting for TDengine (taosd + taosAdapter) to become ready..."
+          for i in $(seq 1 90); do
+            code=$(curl -s -u root:taosdata -d "show databases" \
+              http://127.0.0.1:6041/rest/sql 2>/dev/null | grep -o '"code":[0-9]*' | cut -d: -f2)
+            if [ "$code" = "0" ]; then
+              echo "TDengine is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "TDengine did not become ready in time"
+          docker logs tdengine
+          exit 1
+
       - name: Build the project
         run: |
           cd  spark
           mvn clean package
-
-      - name: checkout TDengine
-        uses: actions/checkout@v3
-        with:
-          repository: 'taosdata/TDengine'
-          path: 'TDengine'
-          ref: ${{ github.base_ref }}
-
-      - name: prepare install TDengine
-        run: | 
-          sudo apt-get install  -y libgeos-dev
-          geos-config --version
-     
-      - name: install TDengine
-        run: cd TDengine && mkdir debug && cd debug && cmake .. -DBUILD_TOOLS=false -DBUILD_HTTP=false -DBUILD_DEPENDENCY_TESTS=false && make && sudo make install
-
-      - name: shell
-        run: |
-          cat >start.sh<<EOF 
-          ulimit -n 65535 && TAOS_SUPPORT_VNODES=256 taosd
-          EOF
-
-      - name: start taosd
-        run: nohup sudo sh ./start.sh &
-
-      - name: start taosadapter
-        run: sudo taosadapter &          
 
       - name: Run the project
         run: |
@@ -85,3 +75,7 @@ jobs:
             echo "Output contains all specified strings."
             echo "test spark with TDengine read|write|subscribe passed."
           fi
+
+      - name: Show TDengine logs on failure
+        if: failure()
+        run: docker logs tdengine | tail -100
