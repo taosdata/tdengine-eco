@@ -38,7 +38,7 @@ jobs:
           echo "Waiting for TDengine (taosd + taosAdapter) to become ready..."
           for i in $(seq 1 90); do
             code=$(curl -s -u root:taosdata -d "show databases" \
-              http://127.0.0.1:6041/rest/sql 2>/dev/null | grep -o '"code":[0-9]*' | cut -d: -f2)
+              http://127.0.0.1:6041/rest/sql 2>/dev/null | grep -o '"code":[0-9]*' | cut -d: -f2) || true
             if [ "$code" = "0" ]; then
               echo "TDengine is ready"
               exit 0
