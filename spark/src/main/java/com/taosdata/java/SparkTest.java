@@ -11,8 +11,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.jdbc.JdbcDialect;
 import org.apache.spark.sql.jdbc.JdbcDialects;
+
+import com.taosdata.spark.TDengineDialect;
 
 
 public class SparkTest {	
@@ -23,8 +24,7 @@ public class SparkTest {
 
 	// td dialect
 	public static void registerDialect() {
-		JdbcDialect tdDialect = new TDengineDialect();
-		JdbcDialects.registerDialect(tdDialect);
+		JdbcDialects.registerDialect(new TDengineDialect());
 	}
 
     // prepare env 
@@ -41,7 +41,6 @@ public class SparkTest {
             // sqls
             String[] sqls = {
                 "DROP TOPIC IF EXISTS topic_meters",
-                "DROP DATABASE IF EXISTS test",
                 "CREATE DATABASE test",
                 "CREATE TABLE test.meters(ts timestamp, current float, voltage int , phase float) tags(groupid int, location varchar(24))",
                 "CREATE TOPIC topic_meters as select * from test.meters;"
