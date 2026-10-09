@@ -32,5 +32,10 @@ The demo works on its own `spark_demo` database (dropped and recreated on each r
 
 * run the job
 ```
-spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar
+spark-submit --master local --name testSpark \
+  --conf spark.driver.userClassPathFirst=true \
+  --conf spark.executor.userClassPathFirst=true \
+  --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar
 ```
+
+Note: `taos-jdbcdriver` 3.9.2 requires Netty 4.2 while Spark distributions ship Netty 4.1, so `userClassPathFirst` is needed to let the Netty version bundled in the demo jar take precedence.
