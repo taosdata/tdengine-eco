@@ -109,7 +109,7 @@ public class DemoSubscribe {
     // pollExample
     public static void pollExample(SparkSession spark, TaosConsumer<ResultBean> consumer) 
                                    throws SQLException, JsonProcessingException {
-        List<String> topics = Collections.singletonList("topic_meters");
+        List<String> topics = Collections.singletonList("topic_spark_demo_meters");
         List<Row> data = new ArrayList<>();
 
         //
@@ -184,9 +184,9 @@ public class DemoSubscribe {
             consumer.close();
 
         } catch (SQLException ex) {
-            System.out.println("Failed to poll data from topic_meters, ErrCode:" + ex.getErrorCode() + "; ErrMessage: " + ex.getMessage());
+            System.out.println("Failed to poll data from topic_spark_demo_meters, ErrCode:" + ex.getErrorCode() + "; ErrMessage: " + ex.getMessage());
         } catch (Exception ex) {
-            System.out.println("Failed to poll data from topic_meters, ErrMessage: " + ex.getMessage());
+            System.out.println("Failed to poll data from topic_spark_demo_meters, ErrMessage: " + ex.getMessage());
         }
 
         // stop

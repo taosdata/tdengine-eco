@@ -30,7 +30,7 @@ public class DemoWrite {
 
             int childTb    = 1;
             int insertRows = 21;
-            String sql = "INSERT INTO test.meters(tbname, groupid, location, ts, current, voltage, phase) " +
+            String sql = "INSERT INTO spark_demo.meters(tbname, groupid, location, ts, current, voltage, phase) " +
                 "VALUES (?,?,?,?,?,?,?)";
             System.out.printf("prepare sql:%s\n", sql);
             // prepare

@@ -28,6 +28,8 @@ mvn clean package
 
 # Run
 
+The demo works on its own `spark_demo` database (dropped and recreated on each run) and never touches any other database on the server.
+
 * run the job
 ```
 spark-submit --master local --name testSpark --class com.taosdata.java.SparkTest /testSpark-2.0-dist.jar

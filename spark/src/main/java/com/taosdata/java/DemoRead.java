@@ -30,7 +30,7 @@ public class DemoRead {
                     .option("queryTimeout", timeout);
 
             // map table
-            String dbtable  = "test.meters";
+            String dbtable  = "spark_demo.meters";
             Dataset<Row> df = reader.option("dbtable", dbtable).load();
             String log      = String.format("------------ show dbtable read:%s -----------", dbtable);
             System.out.println(log);
