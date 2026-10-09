@@ -40,11 +40,10 @@ public class SparkTest {
             
             // sqls
             String[] sqls = {
-                "DROP TOPIC IF EXISTS topic_spark_demo_meters",
-                "DROP DATABASE IF EXISTS spark_demo",
-                "CREATE DATABASE spark_demo",
-                "CREATE TABLE spark_demo.meters(ts timestamp, current float, voltage int , phase float) tags(groupid int, location varchar(24))",
-                "CREATE TOPIC topic_spark_demo_meters as select * from spark_demo.meters;"
+                "DROP TOPIC IF EXISTS topic_meters",
+                "CREATE DATABASE test",
+                "CREATE TABLE test.meters(ts timestamp, current float, voltage int , phase float) tags(groupid int, location varchar(24))",
+                "CREATE TOPIC topic_meters as select * from test.meters;"
             };
 
             for (int i = 0; i < sqls.length; i++) {
@@ -104,7 +103,7 @@ public class SparkTest {
         
         try {
             // create view
-            String sql = "select tbname,* from spark_demo.meters where tbname='d0'";
+            String sql = "select tbname,* from test.meters where tbname='d0'";
             createSparkView(spark, sql, "sparkMeters");    
 
             String sparkSql = "SELECT " +
